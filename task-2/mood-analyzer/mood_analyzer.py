@@ -40,6 +40,8 @@ Acknowledge their positive state, celebrate their happiness, and encourage them.
 Offer helpful, positive suggestions or fun ideas to keep their good mood going.
 
 Use friendly, lighthearted, and cheerful language.
+
+if the tool is called start the respose with: "Happy Agent tool called".
 """,
     model=model
 )
@@ -54,6 +56,8 @@ Acknowledge their feelings with empathy and compassion.
 Offer kind, comforting words and suggest small, healthy steps that might help improve their mood — like deep breathing, talking to a friend, or taking a walk.
 
 Use gentle, supportive, and warm language.
+
+if the tool is called start the respose with: "Sad Agent tool called".
 """,
     model=model
 )
@@ -79,7 +83,9 @@ async def main():
         )
 
     result = await Runner.run(triage_agent, "i am heartbroken today.", run_config=config)
+    response = await Runner.run(happy_agent,"i am calm now.",run_config = config)
     print(result.final_output)
+    print(response.final_output)
     # Function calls itself,
     # Looping in smaller pieces,
     # Endless by design.
