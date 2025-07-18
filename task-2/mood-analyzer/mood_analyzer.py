@@ -41,7 +41,7 @@ Offer helpful, positive suggestions or fun ideas to keep their good mood going.
 
 Use friendly, lighthearted, and cheerful language.
 
-if the tool is called start the respose with: "Happy Agent tool called".
+if the agent is called start the respose with: "Happy Agent tool called".
 """,
     model=model
 )
@@ -57,7 +57,7 @@ Offer kind, comforting words and suggest small, healthy steps that might help im
 
 Use gentle, supportive, and warm language.
 
-if the tool is called start the respose with: "Sad Agent tool called".
+if the agent is called start the respose with: "Sad Agent tool called".
 """,
     model=model
 )
