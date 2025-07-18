@@ -1,22 +1,18 @@
+# main.py
+import chainlit as cl
+from agents import Agent, Runner, AsyncOpenAI, OpenAIChatCompletionsModel
+from agents.run import RunConfig
+from tools import get_country_info
 import os
 from dotenv import load_dotenv
-from agents import Agent, Runner, AsyncOpenAI, OpenAIChatCompletionsModel , function_tools
-from agents.run import RunConfig
-import asyncio
 
-# Load the environment variables from the .env file
+# Load API key from .env (if needed)
 load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-
-# Check if the API key is present; if not, raise an error
-if not gemini_api_key:
-    raise ValueError("GEMINI_API_KEY is not set. Please ensure it is defined in your .env file.")
-
-#Reference: https://ai.google.dev/gemini-api/docs/openai
 external_client = AsyncOpenAI(
-    api_key=gemini_api_key,
-    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+    api_key=GEMINI_API_KEY,
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
 )
 
 model = OpenAIChatCompletionsModel(
@@ -30,61 +26,42 @@ config = RunConfig(
     tracing_disabled=True
 )
 
-@function_tools
-def get_capital(country_name: str) -> str:
-    """
-    get the name of capital of the country name given by the user in input.
-    """
-@function_tools
-def get_language(language: str) -> str:
-    """
-    get the name of language of the country name given by the user in input.
-    """
-@function_tools
-def get_population(population: int) -> str:
-    """
-    get the total number of population of the country name given by the user in input.
-    """    
+agent = Agent(
+    name="country_info_agent",
+    instructions="""
+You are a helpful assistant that takes a country name and returns:
+- Capital
+- Population
+- Official languages
+- Flag image
+- Google Maps link
 
-async def main():
-    agent = Agent(
-        name="country info agent",
-        instructions="""You are country info bot.
-        You will be given a country name and you will use the tools to get the capital, language and population of the country.
-        Use the tools to get the information and return it in a single response.
-        return the response in the following format:
-        "The capital of {country_name} is {capital}, the language is {language} and the population is {population}.",
-        """,
-        model=model
-        tools=[get_capital, get_language, get_population]
-    )
-    
-    message = "What is the capital, language and population of India?"
+Use the tool provided and return everything in a single, user-friendly response.
+""",
+    model=model,
+    tools=[get_country_info]
+)
 
-    result = await Runner.run(agent, message, run_config=config)
-    print(result.final_output)
-    # Function calls itself,
-    # Looping in smaller pieces,
-    # Endless by design.
+@cl.on_message
+async def on_message(message: cl.Message):
+    country = message.content
+    query = f"Give me all details of {country}"
 
+    result = await Runner.run(agent, query, run_config=config)
+    info = result.tool_outputs[0] if result.tool_outputs else {}
 
-if __name__ == "__main__":
-    asyncio.run(main())
-    
-    
-    
-    
-    #
-    #⿣ Country Info Bot (Using Tools)
-#⿣ Country Info Bot (Using Tools)
-# File name: country_info_toolkit.py
-
-# Create 3 tool agents:
-
-# One tells the capital of a country
-
-# One tells the language
-
-# One tells the population
-# An orchestrator agent takes the country name and uses all 3 tools to give complete info.
-
+    if info.get("error"):
+        await cl.Message(content=f"❌ {info['error']}").send()
+    else:
+        response = f"""📍 **{info['country']}**
+**🏛 Capital:** {info['capital']}
+**🗣 Languages:** {info['languages']}
+**👥 Population:** {info['population']}
+🌍 [View on Map]({info['map_link']})
+"""
+        msg = cl.Message(content=response)
+        if info.get("flag_url"):
+            msg.elements = [
+                cl.Image(name="Flag", display="inline", url=info["flag_url"])
+            ]
+        await msg.send()
